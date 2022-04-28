@@ -33,7 +33,6 @@ export const main = Reach.App(() => {
     const BobChoice = declassify(interact.getChoice());
   });
   Bob.publish(BobChoice);
-  commit();
 
   // compute the result depending on their choices
   const outcome =
@@ -44,6 +43,7 @@ export const main = Reach.App(() => {
       : AliceChoice === 1 && BobChoice === 0
       ? 2
       : 3;
+  commit();
 
   // pass the outcome for each to see the result
   each([Alice, Bob], () => {
