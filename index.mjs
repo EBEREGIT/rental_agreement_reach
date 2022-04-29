@@ -28,7 +28,7 @@ const BobContract = BobAccount.contract(backend, AliceContract.getInfo());
 const CHOICE = ["Leave", "Stay"];
 const RESULT = [
   "Bob Takes All the money",
-  "No one takes a dim",
+  "No one takes a dime",
   "Alice Takes All the money",
   "Each Person's money is refunded",
 ];
