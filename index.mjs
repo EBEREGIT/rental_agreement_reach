@@ -4,7 +4,7 @@ const stdlib = loadStdlib();
 
 const startingBalance = stdlib.parseCurrency(100);
 
-// create account balace for Alice and Bob
+// create account balance for Alice and Bob
 const AliceAccount = await stdlib.newTestAccount(startingBalance);
 const BobAccount = await stdlib.newTestAccount(startingBalance);
 
@@ -35,6 +35,8 @@ const RESULT = [
 
 // Define the Partaker
 const Partaker = (person) => ({
+  ...stdlib.hasRandom,
+
   getChoice: () => {
     // make a random choice by picking a number between 1 & 2
     const choice = Math.floor(Math.random() * 2);
