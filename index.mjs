@@ -47,6 +47,10 @@ const Partaker = (person) => ({
   seeResult: (result) => {
     console.log(`${RESULT[result]}`);
   },
+
+  participantTimeout: () => {
+    console.log(`${person} observed a timeout`);
+  }
 });
 
 // initialize the backend
@@ -57,18 +61,27 @@ await Promise.all([
     ...Partaker("Alice"),
     // decides a deposit to make
     deposit: stdlib.parseCurrency(15),
+    // decide how long before time out
+    timeUp: 10,
   }),
 
   // Bob
   BobContract.p.Bob({
     ...Partaker("Bob"),
     // accepts to make the same deposit
-    acceptDeposit: (amount) => {
-      console.log(
-        `Bob accepts to also deposit ${currencyFormatter(
-          amount
-        )} as proposed by Alice`
-      );
+    acceptDeposit: async (amount) => {
+      if ( Math.random() <= 0.5 ) {
+        for ( let i = 0; i < 10; i++ ) {
+          console.log(`  Bob takes his sweet time...`);
+          await stdlib.wait(1);
+        }
+      } else {
+        console.log(
+          `Bob accepts to also deposit ${currencyFormatter(
+            amount
+          )} as proposed by Alice`
+        );
+      }
     },
   }),
 ]);

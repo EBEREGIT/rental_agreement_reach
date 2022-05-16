@@ -26,6 +26,7 @@ const Partaker = {
   ...hasRandom, // for generating random string
   getChoice: Fun([], UInt),
   seeResult: Fun([UInt], Null),
+  participantTimeout: Fun([], Null),
 };
 
 export const main = Reach.App(() => {
@@ -33,8 +34,10 @@ export const main = Reach.App(() => {
   const Alice = Participant("Alice", {
     // extend or take the Partaker properties
     ...Partaker,
-    // define the deposit
+    // declare the deposit
     deposit: UInt,
+    // declare deadline
+    timeUp: UInt,
   });
   const Bob = Participant("Bob", {
     // extend or take the Partaker properties
@@ -45,6 +48,10 @@ export const main = Reach.App(() => {
 
   // start the program
   init();
+
+  const participantTimeout = () => {
+    each([Alice, Bob], () => interact.participantTimeout());
+  };
 
   // Alice local step
   // Alice interact with the frontend to make a choice and commit
@@ -61,9 +68,10 @@ export const main = Reach.App(() => {
 
     // declassify Alice commitment details
     const AliceCommit = declassify(_AliceCommit);
+    const timeUp = declassify(interact.timeUp);
   });
   // makes her hand public and pays in her deposit
-  Alice.publish(deposit, AliceCommit).pay(deposit);
+  Alice.publish(deposit, AliceCommit, timeUp).pay(deposit);
   commit();
 
   //   tell the program that Bob can not know Alice choice for now
@@ -75,7 +83,9 @@ export const main = Reach.App(() => {
     interact.acceptDeposit(deposit);
     const BobChoice = declassify(interact.getChoice());
   });
-  Bob.publish(BobChoice).pay(deposit);
+  Bob.publish(BobChoice)
+    .pay(deposit)
+    .timeout(relativeTime(timeUp), () => closeTo(Alice, participantTimeout));
   commit();
 
   // Declassify and publish Alice Details
@@ -83,7 +93,9 @@ export const main = Reach.App(() => {
     const AliceChoice = declassify(_AliceChoice);
     const AliceSalt = declassify(_AliceSalt);
   });
-  Alice.publish(AliceSalt, AliceChoice);
+  Alice.publish(AliceSalt, AliceChoice).timeout(relativeTime(timeUp), () =>
+    closeTo(Bob, participantTimeout)
+  );
 
   // check if the commitment details and salt matches what was created during makeCommitment
   checkCommitment(AliceCommit, AliceSalt, AliceChoice);
