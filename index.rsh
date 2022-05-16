@@ -58,58 +58,73 @@ export const main = Reach.App(() => {
   Alice.only(() => {
     // declassify the wager
     const deposit = declassify(interact.deposit);
-
-    // get the choice of Alice
-    const _AliceChoice = interact.getChoice();
-
-    // make a commitment to the contract to get
-    // commitment details and a password (salt) for unlocking Alice hand later
-    const [_AliceCommit, _AliceSalt] = makeCommitment(interact, _AliceChoice);
-
-    // declassify Alice commitment details
-    const AliceCommit = declassify(_AliceCommit);
     const timeUp = declassify(interact.timeUp);
   });
   // makes her hand public and pays in her deposit
-  Alice.publish(deposit, AliceCommit, timeUp).pay(deposit);
+  Alice.publish(deposit, timeUp).pay(deposit);
   commit();
-
-  //   tell the program that Bob can not know Alice choice for now
-  unknowable(Bob, Alice(_AliceChoice, _AliceSalt));
 
   // Bob local step
   // Bob interact with the frontend to make a choice
   Bob.only(() => {
     interact.acceptDeposit(deposit);
-    const BobChoice = declassify(interact.getChoice());
   });
-  Bob.publish(BobChoice)
-    .pay(deposit)
-    .timeout(relativeTime(timeUp), () => closeTo(Alice, participantTimeout));
-  commit();
-
-  // Declassify and publish Alice Details
-  Alice.only(() => {
-    const AliceChoice = declassify(_AliceChoice);
-    const AliceSalt = declassify(_AliceSalt);
-  });
-  Alice.publish(AliceSalt, AliceChoice).timeout(relativeTime(timeUp), () =>
-    closeTo(Bob, participantTimeout)
+  Bob.pay(deposit).timeout(relativeTime(timeUp), () =>
+    closeTo(Alice, participantTimeout)
   );
 
-  // check if the commitment details and salt matches what was created during makeCommitment
-  checkCommitment(AliceCommit, AliceSalt, AliceChoice);
+  var outcome = DRAW_NO_ONE;
+  invariant(balance() === 2 * deposit && isResult(outcome));
 
-  // compute the result depending on their choices
-  const outcome = winner(AliceChoice, BobChoice);
+  while (outcome === DRAW_NO_ONE) {
+    commit();
 
-  // transfer to the winner
-  // No one is supposed to get a dim but since we can't leave money in the contract, we do a refund
-  if (outcome === DRAW_NO_ONE) {
-    transfer(1 * deposit).to(Alice);
-    transfer(1 * deposit).to(Bob);
+    Alice.only(() => {
+      // get the choice of Alice
+      const _AliceChoice = interact.getChoice();
+
+      // make a commitment to the contract to get
+      // commitment details and a password (salt) for unlocking Alice hand later
+      const [_AliceCommit, _AliceSalt] = makeCommitment(interact, _AliceChoice);
+
+      // declassify Alice commitment details
+      const AliceCommit = declassify(_AliceCommit);
+    });
+    // makes her hand public and pays in her deposit
+    Alice.publish(AliceCommit).timeout(relativeTime(timeUp), () =>
+      closeTo(Bob, participantTimeout)
+    );
+    commit();
+
+    unknowable(Bob, Alice(_AliceChoice, _AliceSalt));
+
+    // Bob local step
+    // Bob interact with the frontend to make a choice
+    Bob.only(() => {
+      const BobChoice = declassify(interact.getChoice());
+    });
+    Bob.publish(BobChoice).timeout(relativeTime(timeUp), () =>
+      closeTo(Alice, participantTimeout)
+    );
+    commit();
+
+    // Declassify and publish Alice Details
+    Alice.only(() => {
+      const AliceChoice = declassify(_AliceChoice);
+      const AliceSalt = declassify(_AliceSalt);
+    });
+    Alice.publish(AliceSalt, AliceChoice).timeout(relativeTime(timeUp), () =>
+      closeTo(Bob, participantTimeout)
+    );
+
+    // check if the commitment details and salt matches what was created during makeCommitment
+    checkCommitment(AliceCommit, AliceSalt, AliceChoice);
+    // compute the result depending on their choices
+    outcome = winner(AliceChoice, BobChoice);
+    continue;
   }
 
+  // transfer to the winner
   //   Bob takes all
   if (outcome === BOB_WINS) {
     transfer(2 * deposit).to(Bob);

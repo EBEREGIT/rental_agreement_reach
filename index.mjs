@@ -37,10 +37,19 @@ const RESULT = [
 const Partaker = (person) => ({
   ...stdlib.hasRandom,
 
-  getChoice: () => {
+  getChoice: async () => {
     // make a random choice by picking a number between 1 & 2
     const choice = Math.floor(Math.random() * 2);
     console.log(`${person} wants to ${CHOICE[choice]}`);
+    
+    // set a delay to force a timeout sometimes
+    if ( Math.random() <= 0.01 ) {
+      for ( let i = 0; i < 10; i++ ) {
+        console.log(`${person} takes their sweet time sending it back...`);
+        await stdlib.wait(1);
+      }
+    }
+    
     return choice;
   },
 
@@ -69,19 +78,12 @@ await Promise.all([
   BobContract.p.Bob({
     ...Partaker("Bob"),
     // accepts to make the same deposit
-    acceptDeposit: async (amount) => {
-      if ( Math.random() <= 0.5 ) {
-        for ( let i = 0; i < 10; i++ ) {
-          console.log(`  Bob takes his sweet time...`);
-          await stdlib.wait(1);
-        }
-      } else {
+    acceptDeposit: (amount) => {
         console.log(
           `Bob accepts to also deposit ${currencyFormatter(
             amount
           )} as proposed by Alice`
         );
-      }
     },
   }),
 ]);
